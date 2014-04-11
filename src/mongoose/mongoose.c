@@ -3734,6 +3734,12 @@ static int parse_url(const char *url, char *host, int *port) {
 }
 
 static void handle_proxy_request(struct mg_connection *conn) {
+  // header is ready so forward the program to the user program
+  if (call_user(conn, MG_NEW_REQUEST) != NULL) {
+	// Do nothing, callback has served the request
+	return;
+  }
+
   struct mg_request_info *ri = &conn->request_info;
   char host[1025], buf[BUFSIZ];
   int port, is_ssl, len, i, n;
@@ -3749,9 +3755,10 @@ static void handle_proxy_request(struct mg_connection *conn) {
     if ((conn->peer = mg_connect(conn, host, port, is_ssl)) == NULL) {
       return;
     }
+
     conn->peer->client.is_ssl = is_ssl;
   }
-  
+
   // Forward client's request to the target
   mg_printf(conn->peer, "%s %s HTTP/%s\r\n", ri->request_method, ri->uri + len,
             ri->http_version);
@@ -3761,6 +3768,7 @@ static void handle_proxy_request(struct mg_connection *conn) {
     mg_printf(conn->peer, "%s: %s\r\n", ri->http_headers[i].name,
               ri->http_headers[i].value);
   }
+
   // End of headers, final newline
   mg_write(conn->peer, "\r\n", 2);
 
@@ -3770,8 +3778,7 @@ static void handle_proxy_request(struct mg_connection *conn) {
   }
 
   // Read data from the target and forward it to the client
-  while ((n = pull(NULL, conn->peer->client.sock, conn->peer->ssl,
-                   buf, sizeof(buf))) > 0) {
+  while ((n = pull(NULL, conn->peer->client.sock, conn->peer->ssl, buf, sizeof(buf))) > 0) {
     if (mg_write(conn, buf, (size_t)n) != n) {
       break;
     }
