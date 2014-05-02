@@ -174,12 +174,23 @@ namespace WTF {
         return m_impl.template contains<T, Adapter>(value);
     }
 
+	/*
     template<typename T, typename U, typename V>
     inline pair<typename HashSet<T, U, V>::iterator, bool> HashSet<T, U, V>::add(const ValueType& value)
     {
         return m_impl.add(value);
     }
+	*/
+	// fix
+	template<typename T, typename U, typename V>
+	inline pair<typename HashSet<T, U, V>::iterator, bool> HashSet<T, U, V>::add(const ValueType& value)
+	{
+		typedef typename HashSet<T, U, V>::iterator iter_type;
+		auto& temp = m_impl.add(value);
+		return make_pair((iter_type)temp.first, temp.second);
+	}
 
+	/*
     template<typename Value, typename HashFunctions, typename Traits>
     template<typename T, typename HashTranslator>
     inline pair<typename HashSet<Value, HashFunctions, Traits>::iterator, bool>
@@ -188,6 +199,18 @@ namespace WTF {
         typedef HashSetTranslatorAdapter<ValueType, ValueTraits, T, HashTranslator> Adapter;
         return m_impl.template addPassingHashCode<T, T, Adapter>(value, value);
     }
+	*/
+	// fix
+	template<typename Value, typename HashFunctions, typename Traits>
+	template<typename T, typename HashTranslator>
+	inline pair<typename HashSet<Value, HashFunctions, Traits>::iterator, bool>
+	HashSet<Value, HashFunctions, Traits>::add(const T& value)
+	{
+		typedef HashSetTranslatorAdapter<ValueType, ValueTraits, T, HashTranslator> Adapter;
+		typedef typename HashSet<Value, HashFunctions, Traits>::iterator iter_type;
+		auto& temp = m_impl.template addPassingHashCode<T, T, Adapter>(value, value);
+		return make_pair((iter_type)temp.first, temp.second);
+	}
 
     template<typename T, typename U, typename V>
     inline void HashSet<T, U, V>::remove(iterator it)
